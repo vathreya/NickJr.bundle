@@ -2,13 +2,13 @@ import re
 
 ####################################################################################################
 
-NAMESPACES = {'media':'http://search.yahoo.com/mrss/', 'mediaad':'http://blip.tv/mediaad'}
+NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
 
 NICK_ROOT            = "http://www.nickjr.com"
 NICK_SHOWS_LIST      = "http://www.nickjr.com/common/data/kids/get-kids-config-data.jhtml?fsd=/dynaboss&urlAlias=kids-video-landing&af=false"
 RSS_FEED             = "http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?type=network&loc=default&hub=kids&mode=playlist&dartSite=nickjr.playtime.nol&mgid=mgid:cms:item:nickjr.com:%s&demo=null&block=true"
 
-NAME = L('Title')
+NAME = 'Nick Jr.'
 ART  = 'art-default.jpg'
 ICON = 'icon-default.png'
 

@@ -43,14 +43,14 @@ def MainMenu():
 
 		link = NICK_ROOT + item['link']
 
-		oc.add(DirectoryObject(key = Callback(ShowList, image=image, pageUrl=link), title=title, thumb=Resource.ContentsOfURLWithFallback(url=image, fallback=R(ICON))))
+		oc.add(DirectoryObject(key = Callback(ShowList, image=image, pageUrl=link, title=title), title=title, thumb=Resource.ContentsOfURLWithFallback(url=image, fallback=R(ICON))))
 
 	return oc
 
 ####################################################################################################
-def ShowList(image, pageUrl):
+def ShowList(image, pageUrl, title):
 
-	oc = ObjectContainer()
+	oc = ObjectContainer(title2=title)
 	
 	full_episodes = []
 	clips = []

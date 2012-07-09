@@ -71,7 +71,7 @@ def ShowList(sender, image, pageUrl):
 		try:
 			duration = int(item.xpath('.//media:content', namespaces=NAMESPACES)[0].get('duration').replace(':', '')) * 1000   ##ADDED replace(':', '') FOR PROTECTION AGAINST A FEW VIDEOS THAT HAVE "MIN:SEC" RATHER THAN JUST "SEC" 
 		except:
-			duration = "0"
+			duration = 0
 		
 		summary = item.xpath('.//media:description', namespaces=NAMESPACES)[0].text
 

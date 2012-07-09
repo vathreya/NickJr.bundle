@@ -68,7 +68,11 @@ def ShowList(sender, image, pageUrl):
 		if thumb.find('dynaboss') == -1:
 			thumb = thumb.replace("assets", "dynaboss/assets")
 
-		duration = int(item.xpath('.//media:content', namespaces=NAMESPACES)[0].get('duration').replace(':', '')) * 1000   ##ADDED replace(':', '') FOR PROTECTION AGAINST A FEW VIDEOS THAT HAVE "MIN:SEC" RATHER THAN JUST "SEC" 
+		try:
+			duration = int(item.xpath('.//media:content', namespaces=NAMESPACES)[0].get('duration').replace(':', '')) * 1000   ##ADDED replace(':', '') FOR PROTECTION AGAINST A FEW VIDEOS THAT HAVE "MIN:SEC" RATHER THAN JUST "SEC" 
+		except:
+			duration = "0"
+		
 		summary = item.xpath('.//media:description', namespaces=NAMESPACES)[0].text
 
 		if item[0].xpath('..//media:category[@label="full"]', namespaces=NAMESPACES):

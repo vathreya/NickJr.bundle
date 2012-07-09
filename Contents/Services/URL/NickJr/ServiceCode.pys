@@ -36,21 +36,10 @@ def MetadataObjectForURL(url):
 	)
 	
 ####################################################################################################
-def MediaObjectsForURL(url):
-	return [
+	def MediaObjectsForURL(url):
+		return [
 		MediaObject(
-			audio_codec = AudioCodec.AAC,
-			video_codec = VideoCodec.H264,
-			container = 'mp4',
-			video_resolution = 'sd',
-			optimized_for_streaming = True,
+			parts = [PartObject(key=WebVideoURL(url))],
 			audio_channels = 2,
-			parts = [PartObject(key=Callback(PlayVideo, url = url))]
-		)
-	]
-		
-####################################################################################################
-@indirect
-def PlayVideo(url):
-
-	return IndirectResponse(VideoClipObject, key=WebVideoURL(url=url))
+			)
+		]	

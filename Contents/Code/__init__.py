@@ -1,14 +1,14 @@
-import re
-
 NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
 
 NICK_ROOT = "http://www.nickjr.com"
 NICK_SHOWS_LIST = "http://www.nickjr.com/common/data/kids/get-kids-config-data.jhtml?fsd=/dynaboss&urlAlias=kids-video-landing&af=false"
 RSS_FEED = "http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?type=network&loc=default&hub=kids&mode=playlist&dartSite=nickjr.playtime.nol&mgid=mgid:cms:item:nickjr.com:%s&demo=null&block=true"
 
-NAME = 'Nick Jr.'
+NAME = L('Title')
 ART = 'art-default.jpg'
 ICON = 'icon-default.png'
+
+REGEX = Regex('KIDS.add."cmsId", ".+?".;')
 
 ####################################################################################################
 def Start():
@@ -17,17 +17,18 @@ def Start():
 	Plugin.AddViewGroup("InfoList", viewMode="InfoList", mediaType="items")
 	Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
 
-	MediaContainer.art = R(ART)
-	MediaContainer.title1 = NAME
-	MediaContainer.viewGroup = 'List'
-	DirectoryItem.thumb = R(ICON)
-
+	ObjectContainer.title1 = NAME
+	ObjectContainer.view_group = 'List'
+	ObjectContainer.art = R(ART)
+	
 	HTTP.CacheTime = CACHE_1HOUR
+	HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:13.0) Gecko/20100101 Firefox/13.0.1'
 
 ####################################################################################################
 def MainMenu():
 
-	dir = MediaContainer()
+	oc = ObjectContainer()
+	
 	content = JSON.ObjectFromURL(NICK_SHOWS_LIST)
 
 	for item in content['config']['promos'][0]['items']:
@@ -42,27 +43,29 @@ def MainMenu():
 
 		link = NICK_ROOT + item['link']
 
-		dir.Append(Function(DirectoryItem(ShowList, title, thumb=Function(GetThumb, url=image)), image = image, pageUrl = link))
+		oc.add(DirectoryObject(key = Callback(ShowList, image=image, pageUrl=link), title=title, thumb=Resource.ContentsOfURLWithFallback(url=image, fallback=R(ICON))))
 
-	return dir
+	return oc
 
 ####################################################################################################
-def ShowList(sender, image, pageUrl):
+def ShowList(image, pageUrl):
 
-	dir = MediaContainer(title2=sender.itemTitle)
+	oc = ObjectContainer()
+	
 	full_episodes = []
 	clips = []
-
+	
 	showcontent = HTTP.Request(pageUrl).content
-	m = re.compile('KIDS.add."cmsId", ".+?".;').findall(showcontent)
+	m = REGEX.findall(showcontent)
 	cmsid = m[0].split('"')[3]
 	url = RSS_FEED % (cmsid)
 	feedcontent = XML.ElementFromURL(url)
-
+	
 	for item in feedcontent.xpath('//item'):
+		
 		title = item.xpath('.//media:title', namespaces=NAMESPACES)[0].text
 		link = item.xpath('.//media:player', namespaces=NAMESPACES)[0].get('url')
-
+		
 		thumb = item.xpath('.//media:thumbnail', namespaces=NAMESPACES)[0].get('url')
 
 		if thumb.find('dynaboss') == -1:
@@ -71,41 +74,31 @@ def ShowList(sender, image, pageUrl):
 		try:
 			duration = int(item.xpath('.//media:content', namespaces=NAMESPACES)[0].get('duration').replace(':', '')) * 1000   ##ADDED replace(':', '') FOR PROTECTION AGAINST A FEW VIDEOS THAT HAVE "MIN:SEC" RATHER THAN JUST "SEC" 
 		except:
-			duration = "0"
+			duration = 0
 		
 		summary = item.xpath('.//media:description', namespaces=NAMESPACES)[0].text
 
 		if item[0].xpath('..//media:category[@label="full"]', namespaces=NAMESPACES):
-			full_episodes.append((title, thumb, summary, link, duration))
+			clips.append((title, thumb, summary, link, duration))
 		elif item[0].xpath('..//media:category[@label="Playtime Clip"]', namespaces=NAMESPACES):
 			clips.append((title, thumb, summary, link, duration))
-
-	if len(full_episodes) > 0:
-		dir.Append(Function(DirectoryItem(VideoList, title="Full Episodes", thumb=Function(GetThumb, url=image)), videolist=full_episodes))
-
+		elif item[0].xpath('..//media:category[@label="NickJr Clip"]', namespaces=NAMESPACES):
+			clips.append((title, thumb, summary, link, duration))
+		
 	if len(clips) > 0:
-		dir.Append(Function(DirectoryItem(VideoList, title="Clips", thumb=Function(GetThumb, url=image)), videolist=clips))
-
-	return dir
-
-####################################################################################################
-def VideoList(sender, videolist):
-
-	dir = MediaContainer(title2=sender.itemTitle, viewGroup='InfoList')
-
-	for vid in videolist:
-		dir.Append(WebVideoItem(url=vid[3], title=vid[0], thumb=Function(GetThumb, url=vid[1]), summary=vid[2], duration=vid[4]))
-
-	return dir
-
-####################################################################################################
-def GetThumb(url):
-
-	if url:
-		try:
-			image = HTTP.Request(url, cacheTime=CACHE_1WEEK).content
-			return DataObject(image, 'image/jpeg')
-		except:
-			pass
-
-	return Redirect(R(ICON))
+		for vid in clips:
+			title=vid[0]
+			thumb=vid[1]
+			summary=vid[2]
+			url=vid[3]
+			duration=vid[4]
+			
+			oc.add(VideoClipObject(
+				url = url,
+				title = title,
+				summary = summary,
+				duration = duration,
+				thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback=R(ICON)),
+			))
+			
+	return oc

@@ -92,6 +92,7 @@ def ShowList(image, pageUrl, title):
 			summary=vid[2]
 			url=vid[3]
 			duration=vid[4]
+			url = url + "#nickjr"
 			
 			oc.add(VideoClipObject(
 				url = url,

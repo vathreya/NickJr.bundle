@@ -1,0 +1,42 @@
+METALINK = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?mgid='
+PLAYSERVER = 'http://media.mtvnservices.com/'
+
+NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
+
+ICON = 'icon-default.png'
+
+####################################################################################################
+def NormalizeURL(url):
+
+	return url
+	
+####################################################################################################
+def MetadataObjectForURL(url):
+
+	clip = url.replace(PLAYSERVER, '')
+	clipinfo = XML.ElementFromURL(METALINK + clip)
+	
+	title = clipinfo.xpath('//media:title', namespaces=NAMESPACES)[0].text		
+	thumb = clipinfo.xpath('//media:thumbnail', namespaces=NAMESPACES)[0].get('url')
+	summary = clipinfo.xpath('//media:description', namespaces=NAMESPACES)[0].text
+	try:
+		duration = int(clipinfo.xpath('//media:content', namespaces=NAMESPACES)[0].get('duration').replace(':', '')) * 1000
+	except:
+		duration = 0
+	
+	return VideoClipObject(
+		url = url,
+		title = title,
+		summary = summary,
+		duration = duration,
+		thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback=R(ICON)),
+	)
+	
+####################################################################################################
+def MediaObjectsForURL(url):
+	return [
+		MediaObject(
+			parts = [PartObject(key=WebVideoURL(url))],
+			audio_channels = 2,
+		)
+	]	

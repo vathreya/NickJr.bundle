@@ -20,7 +20,7 @@ def Start():
 	ObjectContainer.title1 = NAME
 	ObjectContainer.view_group = 'List'
 	ObjectContainer.art = R(ART)
-	
+
 	HTTP.CacheTime = CACHE_1HOUR
 	HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:13.0) Gecko/20100101 Firefox/13.0.1'
 
@@ -28,7 +28,7 @@ def Start():
 def MainMenu():
 
 	oc = ObjectContainer()
-	
+
 	content = JSON.ObjectFromURL(NICK_SHOWS_LIST)
 
 	for item in content['config']['promos'][0]['items']:
@@ -51,21 +51,21 @@ def MainMenu():
 def ShowList(image, pageUrl, title):
 
 	oc = ObjectContainer(title2=title)
-	
+
 	full_episodes = []
 	clips = []
-	
+
 	showcontent = HTTP.Request(pageUrl).content
 	m = REGEX.findall(showcontent)
 	cmsid = m[0].split('"')[3]
 	url = RSS_FEED % (cmsid)
 	feedcontent = XML.ElementFromURL(url)
-	
+
 	for item in feedcontent.xpath('//item'):
-		
+
 		title = item.xpath('.//media:title', namespaces=NAMESPACES)[0].text
 		link = item.xpath('.//media:player', namespaces=NAMESPACES)[0].get('url')
-		
+
 		thumb = item.xpath('.//media:thumbnail', namespaces=NAMESPACES)[0].get('url')
 
 		if thumb.find('dynaboss') == -1:
@@ -75,7 +75,7 @@ def ShowList(image, pageUrl, title):
 			duration = int(item.xpath('.//media:content', namespaces=NAMESPACES)[0].get('duration').replace(':', '')) * 1000   ##ADDED replace(':', '') FOR PROTECTION AGAINST A FEW VIDEOS THAT HAVE "MIN:SEC" RATHER THAN JUST "SEC" 
 		except:
 			duration = 0
-		
+
 		summary = item.xpath('.//media:description', namespaces=NAMESPACES)[0].text
 
 		if item[0].xpath('..//media:category[@label="full"]', namespaces=NAMESPACES):
@@ -84,7 +84,7 @@ def ShowList(image, pageUrl, title):
 			clips.append((title, thumb, summary, link, duration))
 		elif item[0].xpath('..//media:category[@label="NickJr Clip"]', namespaces=NAMESPACES):
 			clips.append((title, thumb, summary, link, duration))
-		
+
 	if len(clips) > 0:
 		for vid in clips:
 			title=vid[0]
@@ -93,13 +93,13 @@ def ShowList(image, pageUrl, title):
 			url=vid[3]
 			duration=vid[4]
 			url = url + "#nickjr"
-			
+
 			oc.add(VideoClipObject(
 				url = url,
 				title = title,
 				summary = summary,
 				duration = duration,
-				thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback=R(ICON)),
+				thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback=R(ICON))
 			))
-			
+
 	return oc

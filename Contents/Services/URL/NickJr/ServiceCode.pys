@@ -1,9 +1,12 @@
 METALINK = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?mgid='
 PLAYSERVER = 'http://media.mtvnservices.com/'
+FLV_URL = "http://mtvnmobile.vo.llnwd.net/kip0/_pxn=0+_pxK=18639+_pxE=/44620/mtvnorigin/%s"
 
 NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
 
 ICON = 'icon-default.png'
+
+
 
 ####################################################################################################
 def NormalizeURL(url):
@@ -38,7 +41,74 @@ def MediaObjectsForURL(url):
 
 	return [
 		MediaObject(
-			parts = [PartObject(key=WebVideoURL(url))],
-			audio_channels = 2
+			parts = [
+				PartObject(key=Callback(PlayVideo, url=url, bitrate="1000", index=0))
+				],
+			bitrate = 1000,
+			#container = Container.FLV,
+			video_codec = VideoCodec.VP6,
+			audio_codec = AudioCodec.MP3,
+			video_resolution = '480',
+			audio_channels = 2,
+			optimized_for_streaming = True
+		),
+		MediaObject(
+			parts = [
+				PartObject(key=Callback(PlayVideo, url=url, bitrate="900", index=0))
+				],
+			bitrate = 900,
+			#container = Container.FLV,
+			video_codec = VideoCodec.VP6,
+			audio_codec = AudioCodec.MP3,
+			video_resolution = '480',
+			audio_channels = 2,
+			optimized_for_streaming = True
+		),
+		MediaObject(
+			parts = [
+				PartObject(key=Callback(PlayVideo, url=url, bitrate="650", index=0))
+				],
+			bitrate = 650,
+			#container = Container.FLV,
+			video_codec = VideoCodec.VP6,
+			audio_codec = AudioCodec.MP3,
+			video_resolution = '336',
+			audio_channels = 2,
+			optimized_for_streaming = True
+		),
+		MediaObject(
+			parts = [
+				PartObject(key=Callback(PlayVideo, url=url, bitrate="400", index=0))
+				],
+			bitrate = 400,
+			#container = Container.FLV,
+			video_codec = VideoCodec.VP6,
+			audio_codec = AudioCodec.MP3,
+			video_resolution = '336',
+			audio_channels = 2,
+			optimized_for_streaming = True
 		)
-	]	
+	]
+
+####################################################################################################
+def PlayVideo(url, bitrate, index):
+	BITRATES = ['250', '400', '650', '900', '1000']
+	
+	clip = url.replace(PLAYSERVER, '')
+	mrss_data = XML.ElementFromURL(METALINK + clip)
+	player_url = mrss_data.xpath('//media:content', namespaces=NAMESPACES)[index].get('url')
+	player_data = HTML.ElementFromURL(player_url)
+	try:
+		rtmp_url = player_data.xpath('//rendition[@bitrate="'+bitrate+'"]/src')[0].text
+	except:
+		index = BITRATES.index(bitrate)
+		while index > -1:
+			try:
+				rtmp_url = player_data.xpath('//rendition/src')[index].text
+				break
+			except:
+				index = index - 1
+	stream_url = rtmp_url.split('/viacomnickstrm/')[1]
+	flv_url = FLV_URL % stream_url
+	
+	return Redirect(flv_url)

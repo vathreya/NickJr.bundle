@@ -42,9 +42,9 @@ def MediaObjectsForURL(url):
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="1000", index=0))
 			],
 			bitrate = 1000,
-			container = 'flv',
-			video_codec = VideoCodec.VP6,
-			audio_codec = AudioCodec.MP3,
+			container = 'mp4',
+			video_codec = VideoCodec.H264,
+			audio_codec = AudioCodec.AAC,
 			video_resolution = '480',
 			audio_channels = 2,
 			optimized_for_streaming = True
@@ -54,9 +54,9 @@ def MediaObjectsForURL(url):
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="900", index=0))
 			],
 			bitrate = 900,
-			container = 'flv',
-			video_codec = VideoCodec.VP6,
-			audio_codec = AudioCodec.MP3,
+			container = 'mp4',
+			video_codec = VideoCodec.H264,
+			audio_codec = AudioCodec.AAC,
 			video_resolution = '480',
 			audio_channels = 2,
 			optimized_for_streaming = True
@@ -66,10 +66,10 @@ def MediaObjectsForURL(url):
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="650", index=0))
 			],
 			bitrate = 650,
-			container = 'flv',
-			video_codec = VideoCodec.VP6,
-			audio_codec = AudioCodec.MP3,
-			video_resolution = '336',
+			container = 'mp4',
+			video_codec = VideoCodec.H264,
+			audio_codec = AudioCodec.AAC,
+			video_resolution = '360',
 			audio_channels = 2,
 			optimized_for_streaming = True
 		),
@@ -78,10 +78,10 @@ def MediaObjectsForURL(url):
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="400", index=0))
 			],
 			bitrate = 400,
-			container = 'flv',
-			video_codec = VideoCodec.VP6,
-			audio_codec = AudioCodec.MP3,
-			video_resolution = '336',
+			container = 'mp4',
+			video_codec = VideoCodec.H264,
+			audio_codec = AudioCodec.AAC,
+			video_resolution = '288',
 			audio_channels = 2,
 			optimized_for_streaming = True
 		)
@@ -110,6 +110,6 @@ def PlayVideo(url, bitrate='400', index=0):
 				index = index - 1
 
 	stream_url = rtmp_url.split('/viacomnickstrm/')[1]
-	flv_url = FLV_URL % stream_url
+	video_url = FLV_URL % stream_url
 
-	return IndirectResponse(VideoClipObject, key=flv_url)
+	return IndirectResponse(VideoClipObject, key=video_url)

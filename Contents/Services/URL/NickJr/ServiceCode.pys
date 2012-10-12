@@ -1,12 +1,9 @@
 METALINK = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?mgid='
 PLAYSERVER = 'http://media.mtvnservices.com/'
-FLV_URL = "http://mtvnmobile.vo.llnwd.net/kip0/_pxn=0+_pxK=18639+_pxE=/44620/mtvnorigin/%s"
+FLV_URL = 'http://mtvnmobile.vo.llnwd.net/kip0/_pxn=0+_pxK=18639+_pxE=/44620/mtvnorigin/%s'
 
 NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
-
 ICON = 'icon-default.png'
-
-
 
 ####################################################################################################
 def NormalizeURL(url):
@@ -24,9 +21,9 @@ def MetadataObjectForURL(url):
 	summary = clipinfo.xpath('//media:description', namespaces=NAMESPACES)[0].text
 
 	try:
-		duration = int(clipinfo.xpath('//media:content', namespaces=NAMESPACES)[0].get('duration').replace(':', '')) * 1000
+		duration = int(clipinfo.xpath('//media:content', namespaces=NAMESPACES)[0].get('duration')) * 1000
 	except:
-		duration = 0
+		duration = None
 
 	return VideoClipObject(
 		url = url,
@@ -43,9 +40,9 @@ def MediaObjectsForURL(url):
 		MediaObject(
 			parts = [
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="1000", index=0))
-				],
+			],
 			bitrate = 1000,
-			#container = Container.FLV,
+			container = 'flv',
 			video_codec = VideoCodec.VP6,
 			audio_codec = AudioCodec.MP3,
 			video_resolution = '480',
@@ -55,9 +52,9 @@ def MediaObjectsForURL(url):
 		MediaObject(
 			parts = [
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="900", index=0))
-				],
+			],
 			bitrate = 900,
-			#container = Container.FLV,
+			container = 'flv',
 			video_codec = VideoCodec.VP6,
 			audio_codec = AudioCodec.MP3,
 			video_resolution = '480',
@@ -67,9 +64,9 @@ def MediaObjectsForURL(url):
 		MediaObject(
 			parts = [
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="650", index=0))
-				],
+			],
 			bitrate = 650,
-			#container = Container.FLV,
+			container = 'flv',
 			video_codec = VideoCodec.VP6,
 			audio_codec = AudioCodec.MP3,
 			video_resolution = '336',
@@ -79,9 +76,9 @@ def MediaObjectsForURL(url):
 		MediaObject(
 			parts = [
 				PartObject(key=Callback(PlayVideo, url=url, bitrate="400", index=0))
-				],
+			],
 			bitrate = 400,
-			#container = Container.FLV,
+			container = 'flv',
 			video_codec = VideoCodec.VP6,
 			audio_codec = AudioCodec.MP3,
 			video_resolution = '336',
@@ -91,13 +88,16 @@ def MediaObjectsForURL(url):
 	]
 
 ####################################################################################################
-def PlayVideo(url, bitrate, index):
+@indirect
+def PlayVideo(url, bitrate='400', index=0):
+
 	BITRATES = ['250', '400', '650', '900', '1000']
-	
+
 	clip = url.replace(PLAYSERVER, '')
 	mrss_data = XML.ElementFromURL(METALINK + clip)
 	player_url = mrss_data.xpath('//media:content', namespaces=NAMESPACES)[index].get('url')
 	player_data = HTML.ElementFromURL(player_url)
+
 	try:
 		rtmp_url = player_data.xpath('//rendition[@bitrate="'+bitrate+'"]/src')[0].text
 	except:
@@ -108,7 +108,8 @@ def PlayVideo(url, bitrate, index):
 				break
 			except:
 				index = index - 1
+
 	stream_url = rtmp_url.split('/viacomnickstrm/')[1]
 	flv_url = FLV_URL % stream_url
-	
-	return Redirect(flv_url)
+
+	return IndirectResponse(VideoClipObject, key=flv_url)

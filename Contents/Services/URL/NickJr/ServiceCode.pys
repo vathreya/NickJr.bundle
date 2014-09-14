@@ -1,27 +1,26 @@
-METALINK = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?mgid='
-PLAYSERVER = 'http://media.mtvnservices.com/'
-FLV_URL = 'http://mtvnmobile.vo.llnwd.net/kip0/_pxn=0+_pxK=18639+_pxE=/44620/mtvnorigin/%s'
+METALINK = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?mgid=mgid:cms:item:nickjr.com:%s'
+MEDIALINK = 'http://media-utils-api.mtvnservices.com/services/MediaGenerator/mgid:cms:item:nickjr.com:%s'
 
 NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
-ICON = 'icon-default.png'
+RE_BITRATE = Regex('_(\d+)_?[^._]*\.mp4')
 
 ####################################################################################################
 def NormalizeURL(url):
 
-	return url
+	return url.split('?')[0]
 
 ####################################################################################################
 def MetadataObjectForURL(url):
 
-	clip = url.replace(PLAYSERVER, '')
-	clipinfo = XML.ElementFromURL(METALINK + clip)
+	clip_id = url.split('mgid:cms:item:nickjr.com:')[-1]
+	clip_info = XML.ElementFromURL(METALINK % (clip_id))
 
-	title = clipinfo.xpath('//media:title', namespaces=NAMESPACES)[0].text		
-	thumb = clipinfo.xpath('//media:thumbnail', namespaces=NAMESPACES)[0].get('url')
-	summary = clipinfo.xpath('//media:description', namespaces=NAMESPACES)[0].text
+	title = clip_info.xpath('//media:title/text()', namespaces=NAMESPACES)[0]
+	thumb = clip_info.xpath('//media:thumbnail/@url', namespaces=NAMESPACES)[0]
+	summary = clip_info.xpath('//media:description/text()', namespaces=NAMESPACES)[0]
 
 	try:
-		duration = int(clipinfo.xpath('//media:content', namespaces=NAMESPACES)[0].get('duration')) * 1000
+		duration = int(clip_info.xpath('//media:content/@duration', namespaces=NAMESPACES)[0]) * 1000
 	except:
 		duration = None
 
@@ -30,86 +29,71 @@ def MetadataObjectForURL(url):
 		title = title,
 		summary = summary,
 		duration = duration,
-		thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback=R(ICON))
+		thumb = Resource.ContentsOfURLWithFallback(url=thumb)
 	)
 
 ####################################################################################################
+@deferred
 def MediaObjectsForURL(url):
 
-	return [
-		MediaObject(
-			parts = [
-				PartObject(key=Callback(PlayVideo, url=url, bitrate="1000", index=0))
-			],
-			bitrate = 1000,
-			container = 'mp4',
-			video_codec = VideoCodec.H264,
-			audio_codec = AudioCodec.AAC,
-			video_resolution = '480',
-			audio_channels = 2,
-			optimized_for_streaming = True
-		),
-		MediaObject(
-			parts = [
-				PartObject(key=Callback(PlayVideo, url=url, bitrate="900", index=0))
-			],
-			bitrate = 900,
-			container = 'mp4',
-			video_codec = VideoCodec.H264,
-			audio_codec = AudioCodec.AAC,
-			video_resolution = '480',
-			audio_channels = 2,
-			optimized_for_streaming = True
-		),
-		MediaObject(
-			parts = [
-				PartObject(key=Callback(PlayVideo, url=url, bitrate="650", index=0))
-			],
-			bitrate = 650,
-			container = 'mp4',
-			video_codec = VideoCodec.H264,
-			audio_codec = AudioCodec.AAC,
-			video_resolution = '360',
-			audio_channels = 2,
-			optimized_for_streaming = True
-		),
-		MediaObject(
-			parts = [
-				PartObject(key=Callback(PlayVideo, url=url, bitrate="400", index=0))
-			],
-			bitrate = 400,
-			container = 'mp4',
-			video_codec = VideoCodec.H264,
-			audio_codec = AudioCodec.AAC,
-			video_resolution = '288',
-			audio_channels = 2,
-			optimized_for_streaming = True
-		)
-	]
-
-####################################################################################################
-@indirect
-def PlayVideo(url, bitrate='400', index=0):
-
-	BITRATES = ['250', '400', '650', '900', '1000']
-
-	clip = url.replace(PLAYSERVER, '')
-	mrss_data = XML.ElementFromURL(METALINK + clip)
-	player_url = mrss_data.xpath('//media:content', namespaces=NAMESPACES)[index].get('url')
-	player_data = HTML.ElementFromURL(player_url)
-
 	try:
-		rtmp_url = player_data.xpath('//rendition[@bitrate="'+bitrate+'"]/src')[0].text
+		clip_id = url.split('mgid:cms:item:nickjr.com:')[-1]
+		video_data = XML.ElementFromURL(MEDIALINK % (clip_id))
 	except:
-		index = BITRATES.index(bitrate)
-		while index > -1:
-			try:
-				rtmp_url = player_data.xpath('//rendition/src')[index].text
-				break
-			except:
-				index = index - 1
+		raise Ex.MediaNotAvailable
 
-	stream_url = rtmp_url.split('/viacomnickstrm/')[1]
-	video_url = FLV_URL % stream_url
+	available_streams = {}
+	renditions = video_data.xpath('//rendition[@type="video/mp4"]')
 
-	return IndirectResponse(VideoClipObject, key=video_url)
+	if len(renditions) < 1:
+		raise Ex.MediaNotAvailable
+
+	for rendition in renditions:
+
+		if int(rendition.get('height')) < 360:
+			continue
+
+		rtmp_url = rendition.xpath('./src/text()')[0]
+		bitrate = RE_BITRATE.search(rtmp_url).group(1)
+
+		if bitrate not in available_streams:
+			available_streams[bitrate] = []
+
+		part = {}
+		part['duration'] = rendition.get('duration')
+		part['height'] = rendition.get('height')
+		part['rtmp_url'] = rtmp_url
+
+		available_streams[bitrate].append(part)
+
+	media_objects = []
+	bitrates = [int(i) for i in available_streams.keys()]
+	bitrates.sort(reverse=True)
+
+	for bitrate in bitrates:
+
+		parts = []
+
+		for part in available_streams[str(bitrate)]:
+
+			parts.append(
+				PartObject(
+					key = RTMPVideoURL(
+						url='rtmpe://viacommtvstrmfs.fplive.net:1935/viacommtvstrm',
+						clip='mp4:%s' % (part['rtmp_url'].split('/viacomnickstrm/')[-1])
+					),
+					duration = int(part['duration'])*1000
+				)
+			)
+
+			video_resolution = int(part['height'])
+
+		media_objects.append(
+			MediaObject(
+				parts = parts,
+				bitrate = bitrate,
+				video_resolution = video_resolution
+			)
+		)
+
+	return media_objects

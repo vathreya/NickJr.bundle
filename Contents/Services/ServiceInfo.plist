@@ -6,15 +6,9 @@
 	<dict>
 		<key>NickJr</key>
 		<dict>
-			<key>TestURLs</key>
-			<array>
-				<string>http://media.mtvnservices.com/mgid:cms:item:nickjr.com:113022</string>
-				<string>http://media.mtvnservices.com/mgid:cms:item:nickjr.com:103671</string>
-				<string>http://media.mtvnservices.com/mgid:cms:item:nickjr.com:86482</string>
-			</array>
 			<key>URLPatterns</key>
 			<array>
-				<string>http://media.mtvnservices.com/.+nickjr.com:\d+</string>
+				<string>^http://(.+\.)?mtvnservices\.com/.*mgid:cms:item:nickjr.com:\d+</string>
 			</array>
 		</dict>
 	</dict>

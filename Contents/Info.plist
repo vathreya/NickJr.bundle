@@ -6,8 +6,6 @@
 	<string>com.plexapp.plugins.nickjr</string>
 	<key>PlexClientPlatforms</key>
 	<string>*</string>
-	<key>PlexClientPlatformExclusions</key>
-	<string>Roku</string>
 	<key>PlexFrameworkVersion</key>
 	<string>2</string>
 	<key>PlexPluginRegions</key>

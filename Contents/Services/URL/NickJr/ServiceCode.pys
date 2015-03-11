@@ -2,7 +2,7 @@ METALINK = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?mgid=mgid:cms:
 MEDIALINK = 'http://media-utils-api.mtvnservices.com/services/MediaGenerator/mgid:cms:item:nickjr.com:%s'
 
 NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
-RE_BITRATE = Regex('_(\d+)_?[^._]*\.mp4')
+RE_BITRATE = Regex('_(\d+)_?[^._]*\.(mp4|flv)')
 
 ####################################################################################################
 def NormalizeURL(url):
@@ -43,7 +43,7 @@ def MediaObjectsForURL(url):
 		raise Ex.MediaNotAvailable
 
 	available_streams = {}
-	renditions = video_data.xpath('//rendition[@type="video/mp4"]')
+	renditions = video_data.xpath('//rendition[@type="video/mp4" or @type="video/x-flv"]')
 
 	if len(renditions) < 1:
 		raise Ex.MediaNotAvailable
@@ -76,11 +76,16 @@ def MediaObjectsForURL(url):
 
 		for part in available_streams[str(bitrate)]:
 
+			if '.mp4' in part['rtmp_url']:
+				clip = 'mp4:%s' % (part['rtmp_url'].split('/viacomnickstrm/')[-1])
+			else:
+				clip = part['rtmp_url'].split('/viacomnickstrm/')[-1]
+
 			parts.append(
 				PartObject(
 					key = RTMPVideoURL(
-						url='rtmpe://viacommtvstrmfs.fplive.net:1935/viacommtvstrm',
-						clip='mp4:%s' % (part['rtmp_url'].split('/viacomnickstrm/')[-1])
+						url = 'rtmpe://viacommtvstrmfs.fplive.net:1935/viacommtvstrm',
+						clip = clip
 					),
 					duration = int(part['duration'])*1000
 				)

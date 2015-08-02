@@ -8,13 +8,9 @@
 		<dict>
 			<key>URLPatterns</key>
 			<array>
-				<string>^http://(.+\.)?mtvnservices\.com/.*mgid:cms:item:nickjr.com:\d+</string>
+				<string>^nickjr:\/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$</string>
 			</array>
 		</dict>
 	</dict>
-	<key>PlexFrameworkFlags</key>
-	<array>
-		<string>UseRealRTMP</string>
-	</array>
 </dict>
 </plist>

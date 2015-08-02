@@ -1,37 +1,28 @@
-NICK_ROOT = 'http://www.nickjr.com'
-NICK_SHOWS_LIST = 'http://www.nickjr.com/common/data/kids/get-kids-config-data.jhtml?urlAlias=kids-video-landing'
-RSS_FEED = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?type=network&loc=default&hub=kids&mode=playlist&dartSite=nickjr.playtime.nol&mgid=mgid:cms:item:nickjr.com:%s&demo=null&block=true'
-
-NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
-
-RE_CMSID = Regex('KIDS\.add\("cmsId", "(\d+)"\)')
+SHOW_LIST = 'http://www.nick.com/apps/api/v2/editorial-content-categories/properties?apiKey=comgcgbf&killDBSequenceNumber='
+SHOW_VIDEO = 'http://www.nick.com/apps/api/v2/content-collection?apiKey=comgcgbf&killDBSequenceNumber=&orderBy=MinDpStartDateDesc&rows=36&series=%s&start=0&types=video%%2Cepisode'
 
 ####################################################################################################
 def Start():
 
 	ObjectContainer.title1 = 'Nick Jr.'
 	HTTP.CacheTime = CACHE_1HOUR
-	HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.94 Safari/537.36'
+	HTTP.Headers['User-Agent'] = 'nickjr/1.2.1 (iPad; iOS 8.4; Scale/1.00)'
 
 ####################################################################################################
 @handler('/video/nickjr', 'Nick Jr.')
 def MainMenu():
 
 	oc = ObjectContainer()
-	content = JSON.ObjectFromURL(NICK_SHOWS_LIST)
+	json_obj = JSON.ObjectFromURL(SHOW_LIST)
 
-	for item in content['config']['promos'][0]['items']:
+	for show in json_obj:
 
-		title = item['title'].replace('&amp;', '&')
-
-		if title.lower() in ('featured nick jr. videos'):
-			continue
-
-		thumb = NICK_ROOT + item['thumbnail']
-		url = NICK_ROOT + item['link']
+		id = show['urlKey']
+		title = show['seriesTitle']
+		thumb = 'http://nickjr.com%s' % (show['images'][0]['assets'][0]['path'])
 
 		oc.add(DirectoryObject(
-			key = Callback(ShowList, title=title, url=url),
+			key = Callback(Episodes, id=id, title=title),
 			title = title,
 			thumb = Resource.ContentsOfURLWithFallback(url=thumb)
 		))
@@ -39,36 +30,35 @@ def MainMenu():
 	return oc
 
 ####################################################################################################
-@route('/video/nickjr/show')
-def ShowList(title, url):
+@route('/video/nickjr/episodes')
+def Episodes(id, title):
 
 	oc = ObjectContainer(title2=title)
+	json_obj = JSON.ObjectFromURL(SHOW_VIDEO % (id))
 
-	show_page = HTTP.Request(url).content
-	cmsid = RE_CMSID.search(show_page).group(1)
-	feed = XML.ElementFromURL(RSS_FEED % cmsid)
+	for video in json_obj['results']:
 
-	for item in feed.xpath('//item'):
+		if 'authRequired' in video and video['authRequired']:
+			continue
 
-		url = item.xpath('.//media:player/@url', namespaces=NAMESPACES)[0]
-		title = item.xpath('.//media:title/text()', namespaces=NAMESPACES)[0]
-		summary = item.xpath('.//media:description/text()', namespaces=NAMESPACES)[0]
-		thumb = item.xpath('.//media:thumbnail/@url', namespaces=NAMESPACES)[0]
+		id = video['id']
+		title = video['shortTitle']
 
-		if '/dynaboss/' in thumb:
-			thumb = thumb.replace('/dynaboss/', '/')
+		if video['type'] == 'episode':
+			title = '%s (Full Episode)' % (title)
 
-		try:
-			duration = int(item.xpath('.//media:content/@duration', namespaces=NAMESPACES)[0]) * 1000
-		except:
-			duration = None
+		summary = video['description']
+		thumb = 'http://nickjr.com%s' % (video['images'][0]['assets'][0]['path'])
+		duration = Datetime.MillisecondsFromString(video['duration'])
+		originally_available_at = Datetime.ParseDate(video['datePosted'].split('T')[0]).date()
 
 		oc.add(VideoClipObject(
-			url = url,
+			url = 'nickjr://%s' % (id),
 			title = title,
 			summary = summary,
+			thumb = Resource.ContentsOfURLWithFallback(url=thumb),
 			duration = duration,
-			thumb = Resource.ContentsOfURLWithFallback(url=thumb)
+			originally_available_at = originally_available_at
 		))
 
 	return oc

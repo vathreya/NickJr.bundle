@@ -1,34 +1,34 @@
-METALINK = 'http://www.nickjr.com/dynamo/video/data/mrssGen.jhtml?mgid=mgid:cms:item:nickjr.com:%s'
-MEDIALINK = 'http://media-utils-api.mtvnservices.com/services/MediaGenerator/mgid:cms:item:nickjr.com:%s'
+FEED_URL = 'http://udat.mtvnservices.com/service1/dispatch.htm?feed=nick_arc_player_prime&mgid=mgid:arc:video:nickjr.com:%s&plugin.stage=staging&site=nickjr'
+NAMESPACES = {'media': 'http://search.yahoo.com/mrss/'}
 
-NAMESPACES = {'media':'http://search.yahoo.com/mrss/'}
-RE_BITRATE = Regex('_(\d+)_?[^._]*\.(mp4|flv)')
+RE_FIX_XML = Regex('(<!--.*?-->)')
+RE_BITRATE = Regex('_(\d+)_?[^._]*\.mp4')
+
+MediaObject.audio_channels = 2
+MediaObject.optimized_for_streaming = True
 
 ####################################################################################################
 def NormalizeURL(url):
 
-	return url.split('?')[0]
+	return url
 
 ####################################################################################################
 def MetadataObjectForURL(url):
 
-	clip_id = url.split('mgid:cms:item:nickjr.com:')[-1]
-	clip_info = XML.ElementFromURL(METALINK % (clip_id))
+	xml = XML.ElementFromURL(FEED_URL % (url.split('://')[-1]))
 
-	title = clip_info.xpath('//media:title/text()', namespaces=NAMESPACES)[0]
-	thumb = clip_info.xpath('//media:thumbnail/@url', namespaces=NAMESPACES)[0]
-	summary = clip_info.xpath('//media:description/text()', namespaces=NAMESPACES)[0]
+	title = xml.xpath('//title/text()')[0]
+	summary = xml.xpath('//description/text()')[0]
+	thumb = xml.xpath('//media:thumbnail/@url', namespaces=NAMESPACES)
 
-	try:
-		duration = int(clip_info.xpath('//media:content/@duration', namespaces=NAMESPACES)[0]) * 1000
-	except:
-		duration = None
+	if len(thumb) < 1:
+		thumb = ''
+	else:
+		thumb = thumb[0]
 
 	return VideoClipObject(
-		url = url,
 		title = title,
 		summary = summary,
-		duration = duration,
 		thumb = Resource.ContentsOfURLWithFallback(url=thumb)
 	)
 
@@ -36,35 +36,47 @@ def MetadataObjectForURL(url):
 @deferred
 def MediaObjectsForURL(url):
 
-	try:
-		clip_id = url.split('mgid:cms:item:nickjr.com:')[-1]
-		video_data = XML.ElementFromURL(MEDIALINK % (clip_id))
-	except:
-		raise Ex.MediaNotAvailable
+	mrss_data = HTTP.Request(FEED_URL % (url.split('://')[-1])).content
+	mrss_data = RE_FIX_XML.sub('', mrss_data)
+	mrss_data = XML.ElementFromString(mrss_data)
+
+	media_urls = mrss_data.xpath('//media:content/@url', namespaces=NAMESPACES)
 
 	available_streams = {}
-	renditions = video_data.xpath('//rendition[@type="video/mp4" or @type="video/x-flv"]')
 
-	if len(renditions) < 1:
-		raise Ex.MediaNotAvailable
+	for media_url in media_urls:
 
-	for rendition in renditions:
+		try:
+			video_data = XML.ElementFromURL(media_url)
+		except:
+			raise Ex.MediaNotAvailable
 
-		if int(rendition.get('height')) < 360:
-			continue
+		renditions = video_data.xpath('//rendition[@type="video/mp4"]')
 
-		rtmp_url = rendition.xpath('./src/text()')[0]
-		bitrate = RE_BITRATE.search(rtmp_url).group(1)
+		if len(renditions) < 1:
+			raise Ex.MediaNotAvailable
 
-		if bitrate not in available_streams:
-			available_streams[bitrate] = []
+		for rendition in renditions:
 
-		part = {}
-		part['duration'] = rendition.get('duration')
-		part['height'] = rendition.get('height')
-		part['rtmp_url'] = rtmp_url
+			if int(rendition.get('height')) < 360:
+				continue
 
-		available_streams[bitrate].append(part)
+			rtmp_url = rendition.xpath('./src/text()')[0]
+
+			if '.flv' in rtmp_url:
+				continue
+
+			bitrate = RE_BITRATE.search(rtmp_url).group(1)
+
+			if bitrate not in available_streams:
+				available_streams[bitrate] = []
+
+			part = {}
+			part['duration'] = rendition.get('duration')
+			part['height'] = rendition.get('height')
+			part['rtmp_url'] = rtmp_url
+
+			available_streams[bitrate].append(part)
 
 	media_objects = []
 	bitrates = [int(i) for i in available_streams.keys()]
@@ -76,16 +88,11 @@ def MediaObjectsForURL(url):
 
 		for part in available_streams[str(bitrate)]:
 
-			if '.mp4' in part['rtmp_url']:
-				clip = 'mp4:%s' % (part['rtmp_url'].split('/viacomnickstrm/')[-1])
-			else:
-				clip = part['rtmp_url'].split('/viacomnickstrm/')[-1]
-
 			parts.append(
 				PartObject(
 					key = RTMPVideoURL(
-						url = 'rtmpe://viacommtvstrmfs.fplive.net:1935/viacommtvstrm',
-						clip = clip
+						url='rtmpe://viacommtvstrmfs.fplive.net:1935/viacommtvstrm',
+						clip='mp4:%s' % (part['rtmp_url'].split('/viacomnickstrm/')[-1])
 					),
 					duration = int(part['duration'])*1000
 				)

@@ -6,7 +6,8 @@ def Start():
 
 	ObjectContainer.title1 = 'Nick Jr.'
 	HTTP.CacheTime = CACHE_1HOUR
-	HTTP.Headers['User-Agent'] = 'nickjr/1.2.1 (iPad; iOS 8.4; Scale/1.00)'
+	HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36'
+	HTTP.Headers['Cookie'] = 'Visited=Yes'
 
 ####################################################################################################
 @handler('/video/nickjr', 'Nick Jr.')
@@ -16,6 +17,9 @@ def MainMenu():
 	json_obj = JSON.ObjectFromURL(SHOW_LIST)
 
 	for show in json_obj:
+
+		if 'seriesTitle' not in show:
+			continue
 
 		id = show['urlKey']
 		title = show['seriesTitle']

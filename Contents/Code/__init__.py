@@ -23,7 +23,7 @@ def MainMenu():
 
 		id = show['urlKey']
 		title = show['seriesTitle']
-		thumb = 'http://nickjr.com%s' % (show['images'][0]['assets'][0]['path'])
+		thumb = 'http://www.nickjr.com%s' % (show['images'][0]['assets'][0]['path'])
 
 		oc.add(DirectoryObject(
 			key = Callback(Episodes, id=id, title=title),
@@ -52,7 +52,7 @@ def Episodes(id, title):
 			title = '%s (Full Episode)' % (title)
 
 		summary = video['description']
-		thumb = 'http://nickjr.com%s' % (video['images'][0]['assets'][0]['path'])
+		thumb = 'http://www.nickjr.com%s' % (video['images'][0]['assets'][0]['path'])
 		duration = Datetime.MillisecondsFromString(video['duration'])
 		originally_available_at = Datetime.ParseDate(video['datePosted'].split('T')[0]).date()
 

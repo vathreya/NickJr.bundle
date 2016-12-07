@@ -1,6 +1,9 @@
 SHOW_LIST = 'http://www.nick.com/apps/api/v2/editorial-content-categories/properties?apiKey=comgcgbf&killDBSequenceNumber='
 SHOW_VIDEO = 'http://www.nick.com/apps/api/v2/content-collection?apiKey=comgcgbf&killDBSequenceNumber=&orderBy=MinDpStartDateDesc&rows=36&series=%s&start=0&types=video%%2Cepisode'
 
+ART = 'art-default.jpg'
+ICON = 'icon-default.jpg'
+
 ####################################################################################################
 def Start():
 
@@ -10,7 +13,7 @@ def Start():
 	HTTP.Headers['Cookie'] = 'Visited=Yes'
 
 ####################################################################################################
-@handler('/video/nickjr', 'Nick Jr.')
+@handler('/video/nickjr', 'Nick Jr.', art=ART, thumb=ICON)
 def MainMenu():
 
 	oc = ObjectContainer()
